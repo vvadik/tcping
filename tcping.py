@@ -5,7 +5,32 @@ import socket
 import re
 import netifaces as ni
 from packet import Packet
-import ping
+from ping import Ping
+
+
+def get_ip():
+    for i in ni.interfaces():
+        ip = ni.ifaddresses(i)[2][0]['addr']
+        if ip != '127.0.0.1':
+            return ip
+
+
+def set_args(args):
+    if args.port:
+        port = args.port
+    else:
+        port = 80
+
+    if args.count:
+        count = args.count
+    else:
+        count = 4
+
+    if args.waiting:
+        waiting = args.waiting
+    else:
+        waiting = 2
+    return port, count, waiting
 
 
 if __name__ == '__main__':
@@ -27,34 +52,11 @@ if __name__ == '__main__':
     if reg_ip:
         dst = socket.gethostbyname(f'{args.website}')
 
-    if args.port:
-        port = args.port
-    else:
-        port = 80
+    port, count, waiting = set_args(args)
 
-    if args.count:
-        count = args.count
-    else:
-        count = 4
-
-    if args.waiting:
-        waiting = args.waiting
-    else:
-        waiting = 2
-
-    ip = 0
-    for i in ni.interfaces():
-        ip = ni.ifaddresses(i)[2][0]['addr']
-        if ip != '127.0.0.1':
-            break
-
-    pack = Packet(
-        ip,
-        10001,
-        dst,
-        port,
-    )
+    pack = Packet(get_ip(), 10001, dst, port)
     socket.setdefaulttimeout(waiting)
     s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
 
-    ping.start(s, pack, count)
+    ping = Ping(pack, s, count)
+    ping.start()

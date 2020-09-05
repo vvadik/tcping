@@ -7,73 +7,82 @@ import time
 from statistics import Stat
 
 
-def start(s, pack, count):
-    stat = Stat()
-    for i in range(count):
-        tcppacket = build(pack)
+class Ping:
+    def __init__(self, pack, s, count):
+        self.pack = pack
+        self.s = s
+        self.count = count
+        self.stat = Stat()
+
+    def start(self):
+        for i in range(self.count):
+            response, reasone, resp_time = self.ping()
+            self.result(response, reasone, resp_time)
+            time.sleep(1)
+        self.stat.get()
+
+    def ping(self):
+        tcppacket = self.build()
         start_time = time.time()
 
-        s.sendto(tcppacket, (pack.dst_host, 0))
+        self.s.sendto(tcppacket, (self.pack.dst_host, 0))
 
         try:
-            data = s.recv(1024)
+            data = self.s.recv(1024)
         except socket.timeout:
-            result(pack, 'timeout', 0, stat, 'fail')
-            continue
+            return (False, 'timeout', 0)
+        time_ms = round((time.time() - start_time) * 1000, 3)
         answ = struct.unpack('!IBB', data[28:34])
         if answ[0] == 42345 and answ[2] == 18:
-            time_ms = round((time.time() - start_time) * 1000, 3)
-            result(pack, 'port is open', time_ms, stat, 'success')
-        time.sleep(1)
-    stat.get()
+            return (True, 'port is open', time_ms)
+        else:
+            return (False, 'connect refused', time_ms)
 
+    def result(self, response, reasone, resp_time):
+        if resp_time != 0:
+            self.stat.time.append(resp_time)
+        self.stat.results[response] += 1
 
-def result(pack, msg, answ_time, stat, request):
-    if time != 0:
-        stat.time.append(answ_time)
-    stat.results[request] += 1
+        res = f'Ping {self.pack.dst_host}:{self.pack.dst_port} ' \
+              f'- {reasone} - time={resp_time}ms'
+        print(res)
 
-    res = f'Ping {pack.dst_host}:{pack.dst_port} - {msg} - time={answ_time}ms'
-    print(res)
+    def build(self):
+        packet = struct.pack(
+            '!HHIIBBHHH',
+            self.pack.src_port,  # Source Port
+            self.pack.dst_port,  # Destination Port
+            42344,              # SEQ
+            0,              # ACK
+            5 << 4,         # Data Offset
+            2,     # Flags
+            1024,           # Window
+            0,              # Checksum
+            0               # Urgent pointer
+        )
 
+        pseudo_hdr = struct.pack(
+            '!4s4sHH',
+            socket.inet_aton(self.pack.src_host),
+            socket.inet_aton(self.pack.dst_host),
+            socket.IPPROTO_TCP,
+            len(packet)
+        )
 
-def build(tcppacket):
-    packet = struct.pack(
-        '!HHIIBBHHH',
-        tcppacket.src_port,  # Source Port
-        tcppacket.dst_port,  # Destination Port
-        42344,              # SEQ
-        0,              # ACK
-        5 << 4,         # Data Offset
-        2,     # Flags
-        1024,           # Window
-        0,              # Checksum
-        0               # Urgent pointer
-    )
+        checksum = self.chksum(pseudo_hdr + packet)
+        packet = packet[:16] + struct.pack('H', checksum) + packet[18:]
 
-    pseudo_hdr = struct.pack(
-        '!4s4sHH',
-        socket.inet_aton(tcppacket.src_host),    # Source Address
-        socket.inet_aton(tcppacket.dst_host),    # Destination Address
-        socket.IPPROTO_TCP,                 # PTCL
-        len(packet)                         # TCP Length
-    )
+        return packet
 
-    checksum = chksum(pseudo_hdr + packet)
-    packet = packet[:16] + struct.pack('H', checksum) + packet[18:]
+    def chksum(self, packet):
+        """
+        This function I took from scapy's open source code
+        """
+        if len(packet) % 2 != 0:
+            packet += b'\0'
 
-    return packet
+        res = sum(array.array("H", packet))
+        res = (res >> 16) + (res & 0xffff)
+        res += res >> 16
 
-
-def chksum(packet):
-    """
-    This function I took from scapy's open source code
-    """
-    if len(packet) % 2 != 0:
-        packet += b'\0'
-
-    res = sum(array.array("H", packet))
-    res = (res >> 16) + (res & 0xffff)
-    res += res >> 16
-
-    return (~res) & 0xffff
+        return (~res) & 0xffff

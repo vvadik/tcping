@@ -1,7 +1,7 @@
 class Stat:
     def __init__(self):
         self.time = []
-        self.results = {'success': 0, 'fail': 0}
+        self.results = {True: 0, False: 0}
 
     def get(self):
         min_time = 100000
@@ -16,9 +16,9 @@ class Stat:
         if avg_time != 0:
             avg_time = avg_time / len(self.time)
         res = f'Ping statistics:\n ' \
-              f'{self.results["success"] + self.results["fail"]} times sent\n' \
-              f'{self.results["success"]} successful ' \
-              f'{self.results["fail"]} failed\n'
+              f'{self.results[True] + self.results[False]} times sent\n' \
+              f'{self.results[True]} successful ' \
+              f'{self.results[False]} failed\n'
         if avg_time != 0:
             res += f'Time statistics:\n' \
               f'Min = {min_time}ms, Max = {max_time}ms, Avg = {avg_time}ms'
