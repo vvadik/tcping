@@ -35,15 +35,17 @@ def set_args(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Starting tcping')
-    parser.add_argument('website', type=str, metavar='', help='website to ping')
+    parser.add_argument('website', type=str, metavar='',
+                        help='website to ping')
 
-    parser.add_argument('-n', '--number', dest='count', type=int, metavar='',
-                        required=False, help='number of requests, default is 4')
+    parser.add_argument('-n', '--number', dest='count',
+                        type=int, metavar='', required=False,
+                        help='number of requests, default is 4')
     parser.add_argument('-p', '--port', dest='port', type=int, metavar='',
                         required=False, help='port to ping, default is 80')
-    parser.add_argument('-w', '--waiting', dest='waiting', type=int, metavar='',
-                        required=False, help='Waiting _ seconds for a response,'
-                                             'default is 2')
+    parser.add_argument('-w', '--waiting', dest='waiting',
+                        type=int, metavar='', required=False,
+                        help='Waiting _ seconds for a response, default is 2')
 
     args = parser.parse_args()
 

@@ -10,13 +10,13 @@ from tcping import get_ip
 class Test_setup(unittest.TestCase):
     def setup_class(self):
         pack_to_google = Packet(get_ip(),
-                           10001,
-                           socket.gethostbyname('www.google.com'),
-                           80)
+                                10001,
+                                socket.gethostbyname('www.google.com'),
+                                80)
         pack_to_me = Packet('127.0.0.1',
-                           10002,
-                           '127.0.0.1',
-                           10003)
+                            10002,
+                            '127.0.0.1',
+                            10003)
         socket.setdefaulttimeout(2)
         s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
         self.ping_google = Ping(pack_to_google, s, 1)
