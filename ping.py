@@ -8,38 +8,54 @@ from statistics import Stat
 
 
 class Ping:
-    def __init__(self, pack, s, count):
+    def __init__(self, pack, s, count, inf=False):
         self.pack = pack
         self.s = s
         self.count = count
         self.stat = Stat()
+        self.inf = inf
+        self.timeout = s.gettimeout()
 
     def start(self):
-        for i in range(self.count):
-            response, reasone, resp_time = self.ping()
+        i = 0
+        while True:
+            if not self.inf and i >= self.count:
+                break
+            response, reasone, resp_time = self.ping(i + 1)
             self.result(response, reasone, resp_time)
+            i += 1
             time.sleep(1)
         self.stat.get()
 
-    def ping(self):
-        tcppacket = self.build()
+    def ping(self, seq):
+        self.s.settimeout(self.timeout)
+        tcppacket = self.build(seq)
         start_time = time.time()
 
         self.s.sendto(tcppacket, (self.pack.dst_host, 0))
 
-        try:
-            data = self.s.recv(1024)
-        except socket.timeout:
-            return (False, 'timeout', 0)
-        time_ms = round((time.time() - start_time) * 1000, 3)
-        answ = struct.unpack('!IBB', data[28:34])
-        if answ[0] == 42345 and answ[2] == 18:
-            return (True, 'port is open', time_ms)
-        else:
-            return (False, 'connect refused', time_ms)
+        while True:
+            try:
+                data = self.s.recv(1024)
+            except socket.timeout:
+                return False, 'timeout', 0
+            resp_time = time.time() - start_time
+            print('TIME_MS', resp_time)
+            answ = struct.unpack('!IBB', data[28:34])
+            if answ[0] == seq + 1:
+                if answ[2] == 18:
+                    return True, 'port is open', resp_time
+                return False, 'connect refused', resp_time
+            new_timeout = self.timeout - resp_time
+            if new_timeout < 0:
+                return False, 'timeout', 0
+            self.s.settimeout(new_timeout)
+            print('NEW TIMEOUT', new_timeout)
+            continue
 
     def result(self, response, reasone, resp_time):
         if resp_time != 0:
+            resp_time = round(resp_time, 3)
             self.stat.time.append(resp_time)
         self.stat.results[response] += 1
 
@@ -47,12 +63,12 @@ class Ping:
               f'- {reasone} - time={resp_time}ms'
         print(res)
 
-    def build(self):
+    def build(self, seq):
         packet = struct.pack(
             '!HHIIBBHHH',
             self.pack.src_port,  # Source Port
             self.pack.dst_port,  # Destination Port
-            42344,              # SEQ
+            seq,              # SEQ
             0,              # ACK
             5 << 4,         # Data Offset
             2,     # Flags
