@@ -8,7 +8,8 @@ from tcping import get_ip, set_args
 
 
 class Test_setup(unittest.TestCase):
-    def setup_class(self):
+    @classmethod
+    def setUpClass(self):
         pack_to_google = Packet(get_ip(),
                                 10001,
                                 socket.gethostbyname('www.google.com'),
@@ -18,9 +19,13 @@ class Test_setup(unittest.TestCase):
                             '127.0.0.1',
                             10003)
         socket.setdefaulttimeout(2)
-        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
-        self.ping_google = Ping(pack_to_google, s, 1)
-        self.ping_myself = Ping(pack_to_me, s, 1)
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+        self.ping_google = Ping(pack_to_google, self.s, 1)
+        self.ping_myself = Ping(pack_to_me, self.s, 1)
+
+    # @classmethod
+    # def tearDownClass(self):
+    #     self.s.close()
 
     def test_ping(self):
         response, reasone, resp_time = self.ping_google.ping(seq=1)
@@ -39,6 +44,8 @@ class Test_setup(unittest.TestCase):
                b"\x00\x00P\x02\x04\x00_\xba\x00\x00"
 
         self.assertEqual(data, pack)
+        s.close()
+        self.s.close()
 
     def test_parcing_args(self):
         args = Args(None, 4, 2, '127.0.0.1', None, 'abc.com')

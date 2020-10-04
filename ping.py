@@ -17,11 +17,11 @@ class Ping:
         self.timeout = s.gettimeout()
 
     def start(self):
-        i = 0
+        i = 1
         while True:
-            if not self.inf and i >= self.count:
+            if not self.inf and i > self.count:
                 break
-            response, reasone, resp_time = self.ping(i + 1)
+            response, reasone, resp_time = self.ping(i)
             self.result(response, reasone, resp_time)
             i += 1
             time.sleep(1)
@@ -30,9 +30,11 @@ class Ping:
     def ping(self, seq):
         self.s.settimeout(self.timeout)
         tcppacket = self.build(seq)
+
         start_time = time.time()
 
-        self.s.sendto(tcppacket, (self.pack.dst_host, 0))
+        # self.s.sendto(tcppacket, (self.pack.dst_host, 0))
+        self.s.sendto(tcppacket, (self.pack.dst_host, self.pack.dst_port))
 
         while True:
             try:
@@ -40,17 +42,15 @@ class Ping:
             except socket.timeout:
                 return False, 'timeout', 0
             resp_time = time.time() - start_time
-            print('TIME_MS', resp_time)
             answ = struct.unpack('!IBB', data[28:34])
             if answ[0] == seq + 1:
                 if answ[2] == 18:
                     return True, 'port is open', resp_time
-                return False, 'connect refused', resp_time
+                return False, 'Port closed', resp_time
             new_timeout = self.timeout - resp_time
             if new_timeout < 0:
                 return False, 'timeout', 0
             self.s.settimeout(new_timeout)
-            print('NEW TIMEOUT', new_timeout)
             continue
 
     def result(self, response, reasone, resp_time):
