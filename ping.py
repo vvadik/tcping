@@ -7,64 +7,69 @@ import time
 from statistics import Stat
 
 
+def chksum(packet):
+    """
+    This function I took from scapy's open source code
+    """
+    if len(packet) % 2 != 0:
+        packet += b'\0'
+
+    res = sum(array.array("H", packet))
+    res = (res >> 16) + (res & 0xffff)
+    res += res >> 16
+
+    return (~res) & 0xffff
+
+
 class Ping:
-    def __init__(self, pack, s, count, inf=False):
+    def __init__(self, pack, socket, count, inf=False):
         self.pack = pack
-        self.s = s
+        self.socket = socket
         self.count = count
+        if inf:
+            self.count = 0
         self.stat = Stat()
-        self.inf = inf
-        self.timeout = s.gettimeout()
+        self.timeout = socket.gettimeout()
 
     def start(self):
         i = 1
         while True:
-            if not self.inf and i > self.count:
+            if self.count and i > self.count:
                 break
-            response, reasone, resp_time = self.ping(i)
-            self.result(response, reasone, resp_time)
+            self.stat.add(*self.ping(i), self)
             i += 1
-            time.sleep(1)
         self.stat.get()
 
     def ping(self, seq):
-        self.s.settimeout(self.timeout)
+        self.socket.settimeout(self.timeout)
         tcppacket = self.build(seq)
 
         start_time = time.time()
+        self.socket.sendto(tcppacket, (self.pack.dst_host, self.pack.dst_port))
+        return self.parse_packages(start_time, seq)
 
-        # self.s.sendto(tcppacket, (self.pack.dst_host, 0))
-        self.s.sendto(tcppacket, (self.pack.dst_host, self.pack.dst_port))
-
+    def parse_packages(self, start_time, seq):
         while True:
             try:
-                data = self.s.recv(1024)
+                data = self.socket.recv(16384)
             except socket.timeout:
-                return False, 'timeout', 0
+                return 'Timeout', 0
             resp_time = time.time() - start_time
-            answ = struct.unpack('!IBB', data[28:34])
-            if answ[0] == seq + 1:
-                if answ[2] == 18:
-                    return True, 'port is open', resp_time
-                return False, 'Port closed', resp_time
+            answ = struct.unpack('!BBBBIIBB', data[20:34])
+            if answ[1] == 3:
+                return 'Host unreachable', 0
+            if answ[5] == seq + 1:
+                if answ[7] == 18:
+                    return 'Port is open', resp_time
+                return 'Port closed', resp_time
             new_timeout = self.timeout - resp_time
             if new_timeout < 0:
-                return False, 'timeout', 0
-            self.s.settimeout(new_timeout)
+                return 'Timeout', 0
+            self.socket.settimeout(new_timeout)
             continue
 
-    def result(self, response, reasone, resp_time):
-        if resp_time != 0:
-            resp_time = round(resp_time, 3)
-            self.stat.time.append(resp_time)
-        self.stat.results[response] += 1
-
-        res = f'Ping {self.pack.dst_host}:{self.pack.dst_port} ' \
-              f'- {reasone} - time={resp_time}ms'
-        print(res)
-
     def build(self, seq):
-        packet = struct.pack(
+        package = struct.pack(
             '!HHIIBBHHH',
             self.pack.src_port,  # Source Port
             self.pack.dst_port,  # Destination Port
@@ -82,23 +87,10 @@ class Ping:
             socket.inet_aton(self.pack.src_host),
             socket.inet_aton(self.pack.dst_host),
             socket.IPPROTO_TCP,
-            len(packet)
+            len(package)
         )
 
-        checksum = self.chksum(pseudo_hdr + packet)
-        packet = packet[:16] + struct.pack('H', checksum) + packet[18:]
+        checksum = chksum(pseudo_hdr + package)
+        package = package[:16] + struct.pack('H', checksum) + package[18:]
 
-        return packet
-
-    def chksum(self, packet):
-        """
-        This function I took from scapy's open source code
-        """
-        if len(packet) % 2 != 0:
-            packet += b'\0'
-
-        res = sum(array.array("H", packet))
-        res = (res >> 16) + (res & 0xffff)
-        res += res >> 16
-
-        return (~res) & 0xffff
+        return package

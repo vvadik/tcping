@@ -1,7 +1,7 @@
 class Stat:
     def __init__(self):
         self.time = []
-        self.results = {True: 0, False: 0}
+        self.results = {'success': 0, 'failed': 0}
 
     def get(self):
         avg_time = 0
@@ -10,10 +10,24 @@ class Stat:
             max_time = max(self.time)
             avg_time = sum(self.time) / len(self.time)
         res = f'Ping statistics:\n ' \
-              f'{self.results[True] + self.results[False]} times sent\n' \
-              f'{self.results[True]} successful ' \
-              f'{self.results[False]} failed\n'
+              f'{self.results["success"] + self.results["failed"]} ' \
+              f'times sent\n{self.results["success"]} successful ' \
+              f'{self.results["failed"]} failed\n'
         if avg_time != 0:
             res += f'Time statistics:\n' \
               f'Min = {min_time}ms, Max = {max_time}ms, Avg = {avg_time}ms'
         print(res)
+
+    def add(self, reasone, time, Ping):
+        if time != 0:
+            time = round(time, 3)
+            self.time.append(time)
+        if reasone == 'Port is open':
+            self.results['success'] += 1
+        else:
+            self.results['failed'] += 1
+
+        res = f'Ping {Ping.pack.dst_host}:{Ping.pack.dst_port} ' \
+              f'- {reasone} - time={time}ms'
+        print(res)
+

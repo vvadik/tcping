@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-class Packet:
+class Package:
     def __init__(self, src_host, src_port, dst_host, dst_port):
         self.src_host = src_host
         self.src_port = src_port

@@ -1,65 +1,80 @@
 #!/usr/bin/python3
 
 import unittest
+import array
+import struct
 import socket
 from ping import Ping
-from packet import Packet
-from tcping import get_ip, set_args
+from package import Package
+
+
+def chksum(packet):
+    """
+    This function I took from scapy's open source code
+    """
+    if len(packet) % 2 != 0:
+        packet += b'\0'
+
+    res = sum(array.array("H", packet))
+    res = (res >> 16) + (res & 0xffff)
+    res += res >> 16
+
+    return (~res) & 0xffff
+
+
+def build_package(ping, seq, ack, flags):
+    package = struct.pack(
+        '!HHIIBBHHH',
+        ping.pack.src_port,  # Source Port
+        ping.pack.dst_port,  # Destination Port
+        seq,  # SEQ
+        ack,  # ACK
+        5 << 4,  # Data Offset
+        flags,  # Flags
+        1024,  # Window
+        0,  # Checksum
+        0  # Urgent pointer
+    )
+
+    pseudo_hdr = struct.pack(
+        '!4s4sHH',
+        socket.inet_aton(ping.pack.src_host),
+        socket.inet_aton(ping.pack.dst_host),
+        socket.IPPROTO_TCP,
+        len(package)
+    )
+
+    checksum = chksum(pseudo_hdr + package)
+    package = package[:16] + struct.pack('H', checksum) + package[18:]
+    return package
 
 
 class Test_setup(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        pack_to_google = Packet(get_ip(),
-                                10001,
-                                socket.gethostbyname('www.google.com'),
-                                80)
-        pack_to_me = Packet('127.0.0.1',
-                            10002,
+        pack_to_me = Package('127.0.0.1',
+                             10002,
                             '127.0.0.1',
-                            10003)
+                             10003)
         socket.setdefaulttimeout(2)
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
-        self.ping_google = Ping(pack_to_google, self.s, 1)
-        self.ping_myself = Ping(pack_to_me, self.s, 1)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW,
+                                    socket.IPPROTO_TCP)
 
-    # @classmethod
-    # def tearDownClass(self):
-    #     self.s.close()
+        self.ping = Ping(pack_to_me, self.socket, 1)
+        self.foreign_package = build_package(self.ping, 100, 101, 18)
+        self.normal_package = build_package(self.ping, 1, 2, 18)
 
-    def test_ping(self):
-        response, reasone, resp_time = self.ping_google.ping(seq=1)
-        self.ping_google.stat.get()
-        self.assertEqual(response, True)
-        self.assertEqual(reasone, 'port is open')
-
-    def test_tcping(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+    def test_opened_port(self):
+        s = socket.socket()
         s.bind(('', 10003))
+        s.listen(1)
 
-        self.ping_myself.ping(seq=1)
-        data = s.recv(1024)
-        data = data[21:]
-        pack = b"\x12'\x13\x00\x00\x00\x01\x00\x00" \
-               b"\x00\x00P\x02\x04\x00_\xba\x00\x00"
-
-        self.assertEqual(data, pack)
+        self.socket.sendto(self.foreign_package, ('127.0.0.1', 10002))
+        resp, time = self.ping.ping(seq=1)
+        self.assertEqual(resp, 'Port is open')
         s.close()
-        self.s.close()
 
-    def test_parcing_args(self):
-        args = Args(None, 4, 2, '127.0.0.1', None, 'abc.com')
-        port, count, waiting, ip, inf, dst = set_args(args)
-        self.assertEqual(port, 80)
-        self.assertEqual(inf, False)
-        self.assertEqual(waiting, 2)
-
-
-class Args:
-    def __init__(self, port, count, waiting, ip, inf, website):
-        self.port = port
-        self.count = count
-        self.waiting = waiting
-        self.ip = ip
-        self.inf = inf
-        self.website = website
+    def test_closed_port(self):
+        self.socket.sendto(self.foreign_package, ('127.0.0.1', 10000))
+        resp, time = self.ping.ping(seq=1)
+        self.assertEqual(resp, 'Port closed')
