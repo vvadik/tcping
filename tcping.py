@@ -3,7 +3,6 @@
 import argparse
 import sys
 import socket
-import re
 from ping import Ping
 import platform
 
@@ -32,7 +31,10 @@ def parse_args():
                         default=2)
     parser.add_argument('--from-ip', dest='ip',
                         type=str, required=False,
-                        help='Type -ip to set preferred ip')
+                        help='Set preferred ip')
+    parser.add_argument('-i', '--interval', dest='interval',
+                        type=int, required=False,
+                        help='Interval between pings', default=0)
     args = parser.parse_args()
     return args
 
@@ -56,7 +58,7 @@ if __name__ == '__main__':
         print('Use it with sudo')
         sys.exit()
 
-    ping = Ping(ip, 10001, dst, args.port, s, args.count)
+    ping = Ping(ip, 10001, dst, args.port, s, args.count, args.interval)
     try:
         ping.start()
     except KeyboardInterrupt:

@@ -1,3 +1,5 @@
+from ping import Answer
+
 class Stat:
     def __init__(self):
         self.time = []
@@ -22,7 +24,7 @@ class Stat:
         if time != 0:
             time = round(time, 3)
             self.time.append(time)
-        if reasone == 'Port is open':
+        if reasone is Answer.port_open:
             self.results['success'] += 1
         else:
             self.results['failed'] += 1
