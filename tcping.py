@@ -5,6 +5,7 @@ import sys
 import socket
 import re
 from ping import Ping
+import platform
 
 
 def get_ip():
@@ -13,7 +14,7 @@ def get_ip():
     return s.getsockname()[0]
 
 
-if __name__ == '__main__':
+def parse_args():
     parser = argparse.ArgumentParser(description='Starting tcping')
     parser.add_argument('host', type=str,
                         help='host to ping')
@@ -32,20 +33,30 @@ if __name__ == '__main__':
     parser.add_argument('--from-ip', dest='ip',
                         type=str, required=False,
                         help='Type -ip to set preferred ip')
-
     args = parser.parse_args()
+    return args
 
+
+if __name__ == '__main__':
+    if platform.system() == 'Windows':
+        print('It only works on Linux OS')
+        sys.exit()
+    args = parse_args()
     dst = socket.gethostbyname(f'{args.host}')
-    if args.host == '127.0.0.1':
-        args.ip = '127.0.0.1'
     ip = args.ip
+    if args.host == '127.0.0.1':
+        ip = '127.0.0.1'
     if not ip:
         ip = get_ip()
 
     socket.setdefaulttimeout(args.waiting)
-    s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+    except PermissionError:
+        print('Use it with sudo')
+        sys.exit()
 
-    ping = Ping(args.ip, 10001, dst, args.port, s, args.count)
+    ping = Ping(ip, 10001, dst, args.port, s, args.count)
     try:
         ping.start()
     except KeyboardInterrupt:
