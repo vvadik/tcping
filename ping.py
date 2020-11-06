@@ -1,43 +1,59 @@
 #!/usr/bin/python3
 
 import struct
+import itertools
 import array
 import socket
 import time
 from statistics import Stat
 
 
-def chksum(packet):
-    """
-    This function I took from scapy's open source code
-    """
-    if len(packet) % 2 != 0:
-        packet += b'\0'
+def chksum(msg):
+    # """
+    # This function I took from scapy's open source code
+    # """
 
-    res = sum(array.array("H", packet))
+    s = 0
+    # loop taking 2 characters at a time
+    for i in range(0, len(msg), 2):
+        # print(msg[i], type(msg[i]))
+        w = (((msg[i])) << 8) + (((msg[i + 1])))
+        s = s + w
+
+    s = (s >> 16) + (s & 0xffff)
+    s = s + (s >> 16)
+    # complement and mask to 4 byte short
+    s = ~s & 0xffff
+
+    # if len(msg) % 2 != 0:
+        # msg += b'\0'
+
+    res = sum(array.array("H", msg))
     res = (res >> 16) + (res & 0xffff)
     res += res >> 16
+    res = ~res & 0xffff
 
-    return (~res) & 0xffff
+    print(res, s)
+
+    return res
 
 
 class Ping:
-    def __init__(self, pack, socket, count, inf=False):
-        self.pack = pack
+    def __init__(self, src_host, src_port, dst_host, dst_port, socket, count):
+        self.src_host = src_host
+        self.src_port = src_port
+        self.dst_host = dst_host
+        self.dst_port = dst_port
         self.socket = socket
         self.count = count
-        if inf:
-            self.count = 0
         self.stat = Stat()
         self.timeout = socket.gettimeout()
 
     def start(self):
-        i = 1
-        while True:
-            if self.count and i > self.count:
-                break
-            self.stat.add(*self.ping(i), self)
-            i += 1
+        counter = itertools.count(1)
+        while self.count:
+            self.stat.add(*self.ping(next(counter)), self)
+            self.count -= 1
         self.stat.get()
 
     def ping(self, seq):
@@ -45,7 +61,7 @@ class Ping:
         tcppacket = self.build(seq)
 
         start_time = time.time()
-        self.socket.sendto(tcppacket, (self.pack.dst_host, self.pack.dst_port))
+        self.socket.sendto(tcppacket, (self.dst_host, self.dst_port))
         return self.parse_packages(start_time, seq)
 
     def parse_packages(self, start_time, seq):
@@ -71,8 +87,8 @@ class Ping:
     def build(self, seq):
         package = struct.pack(
             '!HHIIBBHHH',
-            self.pack.src_port,  # Source Port
-            self.pack.dst_port,  # Destination Port
+            self.src_port,  # Source Port
+            self.dst_port,  # Destination Port
             seq,              # SEQ
             0,              # ACK
             5 << 4,         # Data Offset
@@ -84,8 +100,8 @@ class Ping:
 
         pseudo_hdr = struct.pack(
             '!4s4sHH',
-            socket.inet_aton(self.pack.src_host),
-            socket.inet_aton(self.pack.dst_host),
+            socket.inet_aton(self.src_host),
+            socket.inet_aton(self.dst_host),
             socket.IPPROTO_TCP,
             len(package)
         )

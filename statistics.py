@@ -18,7 +18,7 @@ class Stat:
               f'Min = {min_time}ms, Max = {max_time}ms, Avg = {avg_time}ms'
         print(res)
 
-    def add(self, reasone, time, Ping):
+    def add(self, reasone, time, Ping, dst_host, dst_port):
         if time != 0:
             time = round(time, 3)
             self.time.append(time)
@@ -27,7 +27,6 @@ class Stat:
         else:
             self.results['failed'] += 1
 
-        res = f'Ping {Ping.pack.dst_host}:{Ping.pack.dst_port} ' \
+        res = f'Ping {Ping.dst_host}:{Ping.dst_port} ' \
               f'- {reasone} - time={time}ms'
         print(res)
-
