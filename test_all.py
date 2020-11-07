@@ -54,7 +54,7 @@ class Test_setup(unittest.TestCase):
     def setUpClass(self):
         pack_to_me = Package('127.0.0.1',
                              10002,
-                            '127.0.0.1',
+                             '127.0.0.1',
                              10003)
         socket.setdefaulttimeout(2)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW,

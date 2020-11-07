@@ -51,14 +51,15 @@ if __name__ == '__main__':
     if not ip:
         ip = get_ip()
 
-    socket.setdefaulttimeout(args.waiting)
+    # socket.setdefaulttimeout(args.waiting)
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
     except PermissionError:
         print('Use it with sudo')
         sys.exit()
 
-    ping = Ping(ip, 10001, dst, args.port, s, args.count, args.interval)
+    ping = Ping(ip, 10001, dst, args.port, s, args.count, args.interval,
+                args.waiting)
     try:
         ping.start()
     except KeyboardInterrupt:

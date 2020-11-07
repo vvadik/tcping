@@ -5,7 +5,7 @@ import itertools
 import socket
 import time
 import enum
-from statistics import Stat
+from statistics import Stat, print_stat
 
 
 def chksum(msg):
@@ -30,7 +30,7 @@ class Answer(enum.Enum):
 
 class Ping:
     def __init__(self, src_host, src_port, dst_host, dst_port, socket, count,
-                 interval):
+                 interval, timeout):
         self.src_host = src_host
         self.src_port = src_port
         self.dst_host = dst_host
@@ -39,7 +39,7 @@ class Ping:
         self.socket = socket
         self.count = count
         self.stat = Stat()
-        self.timeout = socket.gettimeout()
+        self.timeout = timeout
 
     def start(self):
         counter = itertools.count(1)
@@ -50,6 +50,7 @@ class Ping:
             time.sleep(self.interval)
 
         self.stat.get()
+        print_stat(self.stat)
 
     def ping(self, seq):
         self.socket.settimeout(self.timeout)
