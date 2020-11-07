@@ -29,7 +29,7 @@ class Stat:
 
     def add(self, reasone, time, dst_host, dst_port):
         if time != 0:
-            time = round(time, 3)
+            time = round(time * 1000, 3)
             self.time.append(time)
         if reasone is ping.Answer.port_open:
             self.results['success'] += 1

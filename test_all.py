@@ -1,52 +1,9 @@
 #!/usr/bin/python3
 
 import unittest
-import array
 import struct
 import socket
 from ping import Ping
-
-
-#
-# def chksum(packet):
-#     """
-#     This function I took from scapy's open source code
-#     """
-#     if len(packet) % 2 != 0:
-#         packet += b'\0'
-#
-#     res = sum(array.array("H", packet))
-#     res = (res >> 16) + (res & 0xffff)
-#     res += res >> 16
-#
-#     return (~res) & 0xffff
-
-
-# def build_package(ping, seq, ack, flags):
-#     package = struct.pack(
-#         '!HHIIBBHHH',
-#         ping.pack.src_port,  # Source Port
-#         ping.pack.dst_port,  # Destination Port
-#         seq,  # SEQ
-#         ack,  # ACK
-#         5 << 4,  # Data Offset
-#         flags,  # Flags
-#         1024,  # Window
-#         0,  # Checksum
-#         0  # Urgent pointer
-#     )
-#
-#     pseudo_hdr = struct.pack(
-#         '!4s4sHH',
-#         socket.inet_aton(ping.pack.src_host),
-#         socket.inet_aton(ping.pack.dst_host),
-#         socket.IPPROTO_TCP,
-#         len(package)
-#     )
-#
-#     checksum = chksum(pseudo_hdr + package)
-#     package = package[:16] + struct.pack('H', checksum) + package[18:]
-#     return package
 
 
 class Test_setup(unittest.TestCase):

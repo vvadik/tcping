@@ -5,6 +5,7 @@ import sys
 import socket
 from ping import Ping
 import platform
+from network import Network
 
 
 def get_ip():
@@ -53,7 +54,8 @@ if __name__ == '__main__':
 
     # socket.setdefaulttimeout(args.waiting)
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+
+        s = Network()
     except PermissionError:
         print('Use it with sudo')
         sys.exit()
