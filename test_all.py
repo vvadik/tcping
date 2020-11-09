@@ -1,37 +1,66 @@
 #!/usr/bin/python3
 
 import unittest
-import struct
-import socket
-from ping import Ping
+from time import sleep
+from ping import Ping, Answer
+
+
+class Network:
+    def __init__(self):
+        self.case = {1: [b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
+                         b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00"
+                         b"\x00\x00\x01\x00\x00\x00\x02P\x12\x04\x00\x00\x00"
+                         b"\x00\x00"],
+                     2: [b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
+                         b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00"
+                         b"\x00\x00\x01\x00\x00\x00\x02P\x14\x04\x00\x00\x00"
+                         b"\x00\x00"],
+                     3: [b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
+                         b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00\x00"
+                         b"\x00\x01\x00\x00\x00\x03P\x12\x04\x00\x00\x00\x00"
+                         b"\x00",
+                         b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
+                         b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00\x00"
+                         b"\x00\x01\x00\x00\x00\x03P\x12\x04\x00\x00\x00\x00\
+                         x00"]}
+        self.current_case = 0
+
+    def settimeout(self, timeout):
+        pass
+
+    def sendto(self, pack, client):
+        pass
+
+    def recv(self, count):
+        if self.current_case == 3:
+            sleep(2)
+        pack = self.case[self.current_case][0]
+        del(self.case[self.current_case][0])
+        return pack
 
 
 class Test_setup(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        pack_to_me = Package('127.0.0.1',
-                             10002,
-                             '127.0.0.1',
-                             10003)
-        socket.setdefaulttimeout(2)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW,
-                                    socket.IPPROTO_TCP)
-
-        self.ping = Ping(pack_to_me, self.socket, 1)
-        self.foreign_package = build_package(self.ping, 100, 101, 18)
-        self.normal_package = build_package(self.ping, 1, 2, 18)
+        self.socket = Network()
+        self.socket.settimeout(2)
+        ip = '127.0.0.7'
+        self.ping = Ping(ip, 10001, ip, 10002, self.socket, 1, 0, 2)
 
     def test_opened_port(self):
-        s = socket.socket()
-        s.bind(('', 10003))
-        s.listen(1)
+        self.socket.current_case = 1
 
-        self.socket.sendto(self.foreign_package, ('127.0.0.1', 10002))
-        resp, time = self.ping.ping(seq=1)
-        self.assertEqual(resp, 'Port is open')
-        s.close()
+        code, time = self.ping.ping(seq=1)
+        self.assertEqual(code, Answer.port_open)
 
     def test_closed_port(self):
-        self.socket.sendto(self.foreign_package, ('127.0.0.1', 10000))
-        resp, time = self.ping.ping(seq=1)
-        self.assertEqual(resp, 'Port closed')
+        self.socket.current_case = 2
+
+        code, time = self.ping.ping(seq=1)
+        self.assertEqual(code, Answer.port_closed)
+
+    def test_timeout(self):  # + случай когда нам не наши пакеты приходят
+        self.socket.current_case = 3
+
+        code, time = self.ping.ping(seq=1)
+        self.assertEqual(code, Answer.timeout)
