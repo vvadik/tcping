@@ -47,14 +47,13 @@ if __name__ == '__main__':
     args = parse_args()
     dst = socket.gethostbyname(f'{args.host}')
     ip = args.ip
-    if args.host == '127.0.0.1':
+    if dst == '127.0.0.1':
         ip = '127.0.0.1'
     if not ip:
         ip = get_ip()
 
     # socket.setdefaulttimeout(args.waiting)
     try:
-
         s = Network()
     except PermissionError:
         print('Use it with sudo')

@@ -65,11 +65,16 @@ class Ping:
             try:
                 data = self.socket.recv(16384)
             except socket.timeout:
+                try:
+                    data = self.socket.recv_icmp(16384)
+                    type, code = struct.unpack('!BB', data[35:37])
+                    if type == 3 and code == 3:
+                        return Answer.host_unreachable, 0
+                except socket.timeout:
+                    pass
                 return Answer.timeout, 0
             resp_time = time.time() - start_time
             answ = struct.unpack('!BBBBIIBB', data[20:34])
-            if answ[1] == 3 or answ[0] == 3:
-                return Answer.host_unreachable, 0
             if answ[5] == seq + 1:
                 if answ[7] == 18:
                     # rst pack

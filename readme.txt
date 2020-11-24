@@ -5,9 +5,9 @@ sudo python3 tcping.py google.com
 ---------------------------------------------------------------------------------------
 Аргументы запуска:
 
-sudo python3 tcping.py site [-n attempts] [-p port] [-w wait sec] [-ip 127.0.0.1] [-i True]
+sudo python3 tcping.py [host] [-n attempts] [-p port] [-w wait sec] [--from-ip 127.0.0.1] [-i 1]
 
-site IP или URL хоста
+host IP или URL хоста
 -n количество запросов к хосту, по умолчанию бесконечный пинг
 -p порт на который будет отправлен запрос, по умолчанию 80
 -w Ожидание ответа в секундах, по умолчанию 2 
