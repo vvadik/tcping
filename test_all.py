@@ -35,11 +35,11 @@ class Network:
         if self.current_case == 3:
             sleep(2)
         pack = self.case[self.current_case][0]
-        del(self.case[self.current_case][0])
+        del self.case[self.current_case][0]
         return pack
 
 
-class Test_setup(unittest.TestCase):
+class TestTcping(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.socket = Network()

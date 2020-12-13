@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import os
 import socket
 from ping import Ping
 import platform
@@ -21,7 +22,7 @@ def parse_args():
 
     parser.add_argument('-n', '--number', dest='count',
                         type=int, required=False,
-                        help='number of requests, default is 4',
+                        help='number of requests, default is infinity',
                         default=float('Inf'))
     parser.add_argument('-p', '--port', dest='port', type=int,
                         required=False, help='port to ping, default is 80',
@@ -42,8 +43,8 @@ def parse_args():
 
 if __name__ == '__main__':
     if platform.system() == 'Windows':
-        print('It only works on Linux OS')
-        sys.exit()
+        sys.stderr.write('It only works on Linux OS')
+        sys.exit(1)
     args = parse_args()
     dst = socket.gethostbyname(f'{args.host}')
     ip = args.ip
@@ -52,13 +53,10 @@ if __name__ == '__main__':
     if not ip:
         ip = get_ip()
 
-    # socket.setdefaulttimeout(args.waiting)
-    try:
-        s = Network()
-    except PermissionError:
-        print('Use it with sudo')
-        sys.exit()
-
+    if os.geteuid() != 0:
+        sys.stderr.write('Use it with sudo')
+        sys.exit(1)
+    s = Network()
     ping = Ping(ip, 10001, dst, args.port, s, args.count, args.interval,
                 args.waiting)
     try:
