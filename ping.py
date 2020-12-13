@@ -9,23 +9,23 @@ from statistics import Stat, print_stat
 
 
 def chksum(msg):
-    sum = 0
+    sum_ = 0
     n = len(msg) % 2
     for i in range(0, len(msg) - n, 2):
-        sum += (msg[i]) + ((msg[i + 1]) << 8)
+        sum_ += (msg[i]) + ((msg[i + 1]) << 8)
         if n:
-            sum += (msg[i + 1])
-    while sum >> 16:
-        sum = (sum & 0xFFFF) + (sum >> 16)
-    sum = ~sum & 0xffff
-    return sum
+            sum_ += (msg[i + 1])
+    while sum_ >> 16:
+        sum_ = (sum_ & 0xFFFF) + (sum_ >> 16)
+    sum_ = ~sum_ & 0xffff
+    return sum_
 
 
 class Answer(enum.Enum):
-    port_open = 0
-    port_closed = 1
-    timeout = 2
-    host_unreachable = 4
+    PORT_OPEN = 0
+    PORT_CLOSED = 1
+    TIMEOUT = 2
+    HOST_UNREACHABLE = 4
 
 
 class Ping:
@@ -67,12 +67,12 @@ class Ping:
             except socket.timeout:
                 try:
                     data = self.socket.recv_icmp(16384)
-                    type, code = struct.unpack('!BB', data[35:37])
-                    if type == 3 and code == 3:
-                        return Answer.host_unreachable, 0
+                    type_, code = struct.unpack('!BB', data[35:37])
+                    if type_ == 3 and code == 3:
+                        return Answer.HOST_UNREACHABLE, 0
                 except socket.timeout:
                     pass
-                return Answer.timeout, 0
+                return Answer.TIMEOUT, 0
             resp_time = time.time() - start_time
             answ = struct.unpack('!BBBBIIBB', data[20:34])
             if answ[5] == seq + 1:
@@ -80,11 +80,11 @@ class Ping:
                     # rst pack
                     self.socket.sendto(self.build(seq, 4),
                                        (self.dst_host, self.dst_port))
-                    return Answer.port_open, resp_time
-                return Answer.port_closed, resp_time
+                    return Answer.PORT_OPEN, resp_time
+                return Answer.PORT_CLOSED, resp_time
             new_timeout = self.timeout - resp_time
             if new_timeout < 0:
-                return Answer.timeout, 0
+                return Answer.TIMEOUT, 0
             self.socket.settimeout(new_timeout)
             continue
 

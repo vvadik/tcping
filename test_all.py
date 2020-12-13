@@ -51,16 +51,16 @@ class TestTcping(unittest.TestCase):
         self.socket.current_case = 1
 
         code, time = self.ping.ping(seq=1)
-        self.assertEqual(code, Answer.port_open)
+        self.assertEqual(code, Answer.PORT_OPEN)
 
     def test_closed_port(self):
         self.socket.current_case = 2
 
         code, time = self.ping.ping(seq=1)
-        self.assertEqual(code, Answer.port_closed)
+        self.assertEqual(code, Answer.PORT_CLOSED)
 
     def test_timeout(self):  # + случай когда нам не наши пакеты приходят
         self.socket.current_case = 3
 
         code, time = self.ping.ping(seq=1)
-        self.assertEqual(code, Answer.timeout)
+        self.assertEqual(code, Answer.TIMEOUT)
