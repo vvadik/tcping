@@ -17,8 +17,7 @@ def get_ip():
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Starting tcping')
-    parser.add_argument('host', type=str,
-                        help='host to ping')
+    parser.add_argument('host', type=str, help='host to ping')
 
     parser.add_argument('-n', '--number', dest='count',
                         type=int, required=False,
@@ -34,9 +33,8 @@ def parse_args():
     parser.add_argument('--from-ip', dest='ip',
                         type=str, required=False,
                         help='Set preferred ip')
-    parser.add_argument('-i', '--interval', dest='interval',
-                        type=int, required=False,
-                        help='Interval between pings', default=0)
+    parser.add_argument('interval', type=float,
+                        help='Interval between pings in seconds')
     args = parser.parse_args()
     return args
 
