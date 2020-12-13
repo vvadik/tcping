@@ -4,6 +4,7 @@ import struct
 import itertools
 import socket
 import time
+import select
 import enum
 from statistics import Stat, print_stat
 
@@ -40,9 +41,14 @@ class Ping:
         self.count = count
         self.stat = Stat()
         self.timeout = timeout
+        self.polling_obj = select.poll()
+        self.fd_to_socket = {self.socket.tcp.fileno(): self.socket.tcp,
+                             self.socket.icmp.fileno(): self.socket.icmp}
 
     def start(self):
         counter = itertools.count(1)
+        self.polling_obj.register(self.socket.tcp, select.POLLIN)
+        self.polling_obj.register(self.socket.icmp, select.POLLIN)
         while self.count:
             code, resp_time = self.ping(next(counter))
             self.stat.add(code, resp_time, self.dst_host, self.dst_port)
@@ -61,32 +67,36 @@ class Ping:
         return self.parse_packages(start_time, seq)
 
     def parse_packages(self, start_time, seq):
+        new_timeout = self.timeout
         while True:
-            try:
-                data = self.socket.recv(16384)
-            except socket.timeout:
-                try:
-                    data = self.socket.recv_icmp(16384)
-                    type_, code = struct.unpack('!BB', data[35:37])
-                    if type_ == 3 and code == 3:
+            sock = self.polling_obj.poll(new_timeout * 1000)
+            if not sock:
+                return Answer.TIMEOUT, 0
+            else:
+                resp_time = time.time() - start_time
+                fd = sock[0][0]
+                data = self.fd_to_socket[fd].recv(16384)
+                # icmp check
+                type_, code = struct.unpack('!BB', data[20:22])
+                if type_ == 3 and code == 1:
+                    src_port, dst_port, dst_seq = struct.unpack('!HHL',
+                                                                data[48:56])
+                    if (self.src_port == src_port and self.dst_port == dst_port
+                            and seq == dst_seq):
                         return Answer.HOST_UNREACHABLE, 0
-                except socket.timeout:
-                    pass
-                return Answer.TIMEOUT, 0
-            resp_time = time.time() - start_time
-            answ = struct.unpack('!BBBBIIBB', data[20:34])
-            if answ[5] == seq + 1:
-                if answ[7] == 18:
-                    # rst pack
-                    self.socket.sendto(self.build(seq, 4),
-                                       (self.dst_host, self.dst_port))
-                    return Answer.PORT_OPEN, resp_time
-                return Answer.PORT_CLOSED, resp_time
-            new_timeout = self.timeout - resp_time
-            if new_timeout < 0:
-                return Answer.TIMEOUT, 0
-            self.socket.settimeout(new_timeout)
-            continue
+                # tcp check
+                answ = struct.unpack('!BBBBIIBB', data[20:34])
+                if answ[5] == seq + 1:
+                    if answ[7] == 18:
+                        # rst pack
+                        self.socket.sendto(self.build(seq, 4),
+                                           (self.dst_host, self.dst_port))
+                        return Answer.PORT_OPEN, resp_time
+                    return Answer.PORT_CLOSED, resp_time
+                new_timeout = self.timeout - resp_time
+                if new_timeout < 0:
+                    return Answer.TIMEOUT, 0
+                continue
 
     def build(self, seq, flags):
         package = struct.pack(
