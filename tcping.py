@@ -41,7 +41,7 @@ def parse_args():
 
 if __name__ == '__main__':
     if platform.system() == 'Windows':
-        sys.stderr.write('It only works on Linux OS')
+        sys.stderr.write('It only works on Linux OS\n')
         sys.exit(1)
     args = parse_args()
     dst = socket.gethostbyname(f'{args.host}')
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         ip = get_ip()
 
     if os.geteuid() != 0:
-        sys.stderr.write('Use it with sudo')
+        sys.stderr.write('Use it with sudo\n')
         sys.exit(1)
     s = Network()
     ping = Ping(ip, 10001, dst, args.port, s, args.count, args.interval,
