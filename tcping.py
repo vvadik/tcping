@@ -35,6 +35,8 @@ def parse_args():
                         help='Set preferred ip')
     parser.add_argument('interval', type=float,
                         help='Interval between pings in seconds')
+    parser.add_argument('-d', '--debug', dest='debug', default=False,
+                        action='store_true', required=False)
     args = parser.parse_args()
     return args
 
@@ -56,7 +58,7 @@ if __name__ == '__main__':
         sys.exit(1)
     s = Network()
     ping = Ping(ip, 10001, dst, args.port, s, args.count, args.interval,
-                args.waiting)
+                args.waiting, args.debug)
     try:
         ping.start()
     except KeyboardInterrupt:

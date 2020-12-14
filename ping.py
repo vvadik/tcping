@@ -7,6 +7,7 @@ import time
 import select
 import enum
 from statistics import Stat, print_stat
+from sniffer import sniff
 
 
 def chksum(msg):
@@ -31,7 +32,7 @@ class Answer(enum.Enum):
 
 class Ping:
     def __init__(self, src_host, src_port, dst_host, dst_port, socket, count,
-                 interval, timeout):
+                 interval, timeout, debug):
         self.src_host = src_host
         self.src_port = src_port
         self.dst_host = dst_host
@@ -41,6 +42,7 @@ class Ping:
         self.count = count
         self.stat = Stat()
         self.timeout = timeout
+        self.debug = debug
         self.polling_obj = select.poll()
         self.fd_to_socket = {self.socket.tcp.fileno(): self.socket.tcp,
                              self.socket.icmp.fileno(): self.socket.icmp}
@@ -64,14 +66,17 @@ class Ping:
 
         start_time = time.time()
         self.socket.sendto(tcppacket, (self.dst_host, self.dst_port))
-        return self.parse_packages(start_time, seq)
+        result, time_, recv_pack = self.parse_packages(start_time, seq)
+        if self.debug:
+            sniff(tcppacket, recv_pack)
+        return result, time_
 
     def parse_packages(self, start_time, seq):
         new_timeout = self.timeout
         while True:
             sock = self.polling_obj.poll(new_timeout * 1000)
             if not sock:
-                return Answer.TIMEOUT, 0
+                return Answer.TIMEOUT, 0, None
             else:
                 resp_time = time.time() - start_time
                 fd = sock[0][0]
@@ -83,7 +88,7 @@ class Ping:
                                                                 data[48:56])
                     if (self.src_port == src_port and self.dst_port == dst_port
                             and seq == dst_seq):
-                        return Answer.HOST_UNREACHABLE, 0
+                        return Answer.HOST_UNREACHABLE, 0, data
                 # tcp check
                 answ = struct.unpack('!BBBBIIBB', data[20:34])
                 if answ[5] == seq + 1:
@@ -91,11 +96,11 @@ class Ping:
                         # rst pack
                         self.socket.sendto(self.build(seq, 4),
                                            (self.dst_host, self.dst_port))
-                        return Answer.PORT_OPEN, resp_time
-                    return Answer.PORT_CLOSED, resp_time
+                        return Answer.PORT_OPEN, resp_time, data
+                    return Answer.PORT_CLOSED, resp_time, data
                 new_timeout = self.timeout - resp_time
                 if new_timeout < 0:
-                    return Answer.TIMEOUT, 0
+                    return Answer.TIMEOUT, 0, None
                 continue
 
     def build(self, seq, flags):
