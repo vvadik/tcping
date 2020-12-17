@@ -1,4 +1,5 @@
 import socket
+import select
 
 
 class Network:
@@ -7,7 +8,11 @@ class Network:
                                  socket.IPPROTO_TCP)
         self.icmp = socket.socket(socket.AF_INET, socket.SOCK_RAW,
                                   socket.IPPROTO_ICMP)
-        # self.socket_icmp.settimeout(0.1)
+        self.fd_to_socket = {self.tcp.fileno(): self.tcp,
+                             self.icmp.fileno(): self.icmp}
+        self.sockets = select.poll()
+        self.sockets.register(self.tcp, select.POLLIN)
+        self.sockets.register(self.icmp, select.POLLIN)
 
     def settimeout(self, timeout):
         self.tcp.settimeout(timeout)
@@ -20,3 +25,9 @@ class Network:
 
     def recv_icmp(self, count):
         return self.icmp.recv(count)
+
+    def poll(self, timeout):
+        number = self.sockets.poll(timeout)
+        if number:
+            return self.fd_to_socket[number[0][0]]
+        return number

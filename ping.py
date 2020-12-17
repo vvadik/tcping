@@ -4,7 +4,6 @@ import struct
 import itertools
 import socket
 import time
-import select
 import enum
 from statistics import Stat, print_stat
 from sniffer import sniff
@@ -32,7 +31,7 @@ class Answer(enum.Enum):
 
 class Ping:
     def __init__(self, src_host, src_port, dst_host, dst_port, socket, count,
-                 interval, timeout, debug):
+                 interval, timeout, debug=False):
         self.src_host = src_host
         self.src_port = src_port
         self.dst_host = dst_host
@@ -43,14 +42,9 @@ class Ping:
         self.stat = Stat()
         self.timeout = timeout
         self.debug = debug
-        self.polling_obj = select.poll()
-        self.fd_to_socket = {self.socket.tcp.fileno(): self.socket.tcp,
-                             self.socket.icmp.fileno(): self.socket.icmp}
 
     def start(self):
         counter = itertools.count(1)
-        self.polling_obj.register(self.socket.tcp, select.POLLIN)
-        self.polling_obj.register(self.socket.icmp, select.POLLIN)
         while self.count:
             code, resp_time = self.ping(next(counter))
             self.stat.add(code, resp_time, self.dst_host, self.dst_port)
@@ -74,13 +68,12 @@ class Ping:
     def parse_packages(self, start_time, seq):
         new_timeout = self.timeout
         while True:
-            sock = self.polling_obj.poll(new_timeout * 1000)
+            sock = self.socket.poll(new_timeout * 1000)
             if not sock:
                 return Answer.TIMEOUT, 0, None
             else:
                 resp_time = time.time() - start_time
-                fd = sock[0][0]
-                data = self.fd_to_socket[fd].recv(16384)
+                data = sock.recv(16384)
                 # icmp check
                 type_, code = struct.unpack('!BB', data[20:22])
                 if type_ == 3 and code == 1:

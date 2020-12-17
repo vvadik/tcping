@@ -66,12 +66,14 @@ def _parse_ip(pack):
 
 
 def _parse_tcp(pack):
-    result = [struct.unpack('!H', pack[:2]), struct.unpack('!H', pack[2:4]),
-              struct.unpack('!I', pack[4:8]), struct.unpack('!I', pack[8:12]),
+    result = [struct.unpack('!H', pack[:2])[0],
+              struct.unpack('!H', pack[2:4])[0],
+              struct.unpack('!I', pack[4:8])[0],
+              struct.unpack('!I', pack[8:12])[0],
               bin(struct.unpack('!H', pack[12:14])[0]),
-              struct.unpack('!H', pack[14:16]),
-              struct.unpack('!H', pack[16:18]),
-              struct.unpack('!H', pack[18:20])]
+              struct.unpack('!H', pack[14:16])[0],
+              struct.unpack('!H', pack[16:18])[0],
+              struct.unpack('!H', pack[18:20])[0]]
     return result
 
 

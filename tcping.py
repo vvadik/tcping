@@ -46,7 +46,7 @@ if __name__ == '__main__':
         sys.stderr.write('It only works on Linux OS\n')
         sys.exit(1)
     args = parse_args()
-    dst = socket.gethostbyname(f'{args.host}')
+    dst = socket.gethostbyname(args.host)
     ip = args.ip
     if dst == '127.0.0.1':
         ip = '127.0.0.1'

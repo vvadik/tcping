@@ -15,14 +15,17 @@ class Network:
                          b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00"
                          b"\x00\x00\x01\x00\x00\x00\x02P\x14\x04\x00\x00\x00"
                          b"\x00\x00"],
-                     3: [b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
-                         b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00\x00"
-                         b"\x00\x01\x00\x00\x00\x03P\x12\x04\x00\x00\x00\x00"
-                         b"\x00",
-                         b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
-                         b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00\x00"
-                         b"\x00\x01\x00\x00\x00\x03P\x12\x04\x00\x00\x00\x00\
-                         x00"]}
+                     3: [b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                         b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x01\x00\x00"
+                         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'"
+                         b"\x11'\x12\x00\x00\x00\x01"],
+                     4: [b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x04\x01\x00\x00'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x04\x01\x00\x00'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00']}
         self.current_case = 0
 
     def settimeout(self, timeout):
@@ -32,19 +35,23 @@ class Network:
         pass
 
     def recv(self, count):
-        if self.current_case == 3:
-            sleep(2)
-        pack = self.case[self.current_case][0]
-        del self.case[self.current_case][0]
-        return pack
+        if self.case[self.current_case]:
+            pack = self.case[self.current_case][0]
+            del self.case[self.current_case][0]
+            return pack
+        return b''
+
+    def poll(self, timeout):
+        if self.current_case == 4:
+            sleep(1.5)
+        return self
 
 
 class TestTcping(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.socket = Network()
-        self.socket.settimeout(2)
-        ip = '127.0.0.7'
+        ip = '127.0.0.1'
         self.ping = Ping(ip, 10001, ip, 10002, self.socket, 1, 0, 2)
 
     def test_opened_port(self):
@@ -59,8 +66,14 @@ class TestTcping(unittest.TestCase):
         code, time = self.ping.ping(seq=1)
         self.assertEqual(code, Answer.PORT_CLOSED)
 
-    def test_timeout(self):  # + случай когда нам не наши пакеты приходят
+    def test_host_unreachable(self):
         self.socket.current_case = 3
+
+        code, time = self.ping.ping(seq=1)
+        self.assertEqual(code, Answer.HOST_UNREACHABLE)
+
+    def test_foreign_pack_plus_timeout(self):
+        self.socket.current_case = 4
 
         code, time = self.ping.ping(seq=1)
         self.assertEqual(code, Answer.TIMEOUT)

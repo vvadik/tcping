@@ -36,6 +36,8 @@
 .idea/misc.xml
 .idea/tcping.iml
 .idea/misc.xml
+__pycache__
 __pycache__/test_all.cpython-36-pytest-6.0.1.pyc.19638
 __pycache__/test_all.cpython-36-pytest-6.0.1.pyc.20667
 __pycache__/sniffer.cpython-36.pyc
+__pycache__/test_all.cpython-36-pytest-6.0.1.pyc.5273
