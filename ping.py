@@ -5,7 +5,7 @@ import itertools
 import socket
 import time
 import enum
-from statistics import Stat, print_stat
+from statistics import Stat
 from sniffer import sniff
 
 
@@ -30,29 +30,28 @@ class Answer(enum.Enum):
 
 
 class Ping:
-    def __init__(self, src_host, src_port, dst_host, dst_port, socket, count,
-                 interval, timeout, debug=False):
-        self.src_host = src_host
-        self.src_port = src_port
-        self.dst_host = dst_host
-        self.dst_port = dst_port
-        self.interval = interval
-        self.socket = socket
-        self.count = count
+    def __init__(self, source, destination, network, timeout, debug=False):
+        self.src_host, self.src_port = source
+        self.dst_host, self.dst_port = destination
+        self.socket = network
         self.stat = Stat()
         self.timeout = timeout
         self.debug = debug
 
-    def start(self):
+    def start(self, count, interval):
         counter = itertools.count(1)
-        while self.count:
+        while count:
             code, resp_time = self.ping(next(counter))
-            self.stat.add(code, resp_time, self.dst_host, self.dst_port)
-            self.count -= 1
-            time.sleep(self.interval)
+            self.stat.add(code, resp_time)
+            res = (f'Ping {self.dst_host}:{self.dst_port} '
+                   f'- {code} - time={round(resp_time * 1000, 3)}ms')
+            print(res)
+            count -= 1
+            if interval - resp_time > 0:
+                time.sleep(interval - resp_time)
 
         self.stat.get()
-        print_stat(self.stat)
+        print(self.stat.sumup())
 
     def ping(self, seq):
         self.socket.settimeout(self.timeout)

@@ -28,23 +28,35 @@ def parse_args():
                         default=80)
     parser.add_argument('-w', '--waiting', dest='waiting',
                         type=int, required=False,
-                        help='Response wait timeout, in seconds, default is 2',
-                        default=2)
+                        help='Response wait timeout, in seconds, '
+                             'default is 5',
+                        default=5)
     parser.add_argument('--from-ip', dest='ip',
                         type=str, required=False,
                         help='Set preferred ip')
-    parser.add_argument('interval', type=float,
-                        help='Interval between pings in seconds')
+    parser.add_argument('-i', '--interval', type=float, required=False,
+                        help='Interval between pings in seconds', default=1)
     parser.add_argument('-d', '--debug', dest='debug', default=False,
                         action='store_true', required=False)
     args = parser.parse_args()
     return args
 
 
+def _check_port(s):
+    for port in range(49152, 65535):
+        try:
+            s.tcp.bind(('', port))
+        except socket.error:
+            pass
+        else:
+            return port
+
+
 if __name__ == '__main__':
     if platform.system() == 'Windows':
         sys.stderr.write('It only works on Linux OS\n')
         sys.exit(1)
+
     args = parse_args()
     dst = socket.gethostbyname(args.host)
     ip = args.ip
@@ -56,10 +68,12 @@ if __name__ == '__main__':
     if os.geteuid() != 0:
         sys.stderr.write('Use it with sudo\n')
         sys.exit(1)
+
     s = Network()
-    ping = Ping(ip, 10001, dst, args.port, s, args.count, args.interval,
-                args.waiting, args.debug)
+    port = _check_port(s)
+
+    ping = Ping((ip, port), (dst, args.port), s, args.waiting, args.debug)
     try:
-        ping.start()
+        ping.start(args.count, args.interval)
     except KeyboardInterrupt:
         sys.exit()

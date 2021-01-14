@@ -1,11 +1,29 @@
 #!/usr/bin/python3
 
 import unittest
-from time import sleep
 from ping import Ping, Answer
 
 
 class Network:
+    '''
+    case 1: Проверка на открытый порт
+    Приходит пакетов: 1
+
+    case 2: Проверка на закрытый порт
+    Приходит пакетов: 1
+
+    case 3: Проверка на Host Unreachable
+    Приходит пакетов: 1
+
+    case 4: Проверка на неизвестные пакеты icmp
+    Приходит пакетов: 3
+
+    case 5: Проверка на неизвестные пакеты tcp
+    Приходит пакетов: 3
+
+    case 6: Проверка на timeout
+    Ничего не приходит
+    '''
     def __init__(self):
         self.case = {1: [b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
                          b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00"
@@ -25,7 +43,21 @@ class Network:
                          b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
                          b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
                          b'\x00\x00\x00\x00\x00\x00\x00\x00\x04\x01\x00\x00'
-                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00']}
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+                         b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
+                         b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00"
+                         b"\x00\x00\x01\x00\x00\x00\x02P\x12\x04\x00\x00\x00"
+                         b"\x00\x00"],
+                     5: [b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00',
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00',
+                         b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
+                         b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00"
+                         b"\x00\x00\x01\x00\x00\x00\x02P\x12\x04\x00\x00\x00"
+                         b"\x00\x00"]}
         self.current_case = 0
 
     def settimeout(self, timeout):
@@ -39,20 +71,20 @@ class Network:
             pack = self.case[self.current_case][0]
             del self.case[self.current_case][0]
             return pack
-        return b''
+        return
 
     def poll(self, timeout):
-        if self.current_case == 4:
-            sleep(1.5)
+        if self.current_case == 6:
+            return
         return self
 
 
 class TestTcping(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
-        self.socket = Network()
+    def setUpClass(cls):
+        cls.socket = Network()
         ip = '127.0.0.1'
-        self.ping = Ping(ip, 10001, ip, 10002, self.socket, 1, 0, 2)
+        cls.ping = Ping((ip, 10001), (ip, 10002), cls.socket, 2)
 
     def test_opened_port(self):
         self.socket.current_case = 1
@@ -72,8 +104,20 @@ class TestTcping(unittest.TestCase):
         code, time = self.ping.ping(seq=1)
         self.assertEqual(code, Answer.HOST_UNREACHABLE)
 
-    def test_foreign_pack_plus_timeout(self):
+    def test_foreign_pack_icmp(self):
         self.socket.current_case = 4
+
+        code, time = self.ping.ping(seq=1)
+        self.assertEqual(code, Answer.PORT_OPEN)
+
+    def test_foreign_pack_tcp(self):
+        self.socket.current_case = 5
+
+        code, time = self.ping.ping(seq=1)
+        self.assertEqual(code, Answer.PORT_OPEN)
+
+    def test_timeout(self):
+        self.socket.current_case = 6
 
         code, time = self.ping.ping(seq=1)
         self.assertEqual(code, Answer.TIMEOUT)

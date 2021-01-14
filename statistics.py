@@ -1,11 +1,6 @@
 import ping
 
 
-def print_stat(stat):
-    result = stat.sumup()
-    print(result)
-
-
 class Stat:
     def __init__(self):
         self.time = []
@@ -20,7 +15,7 @@ class Stat:
             self.max_time = max(self.time)
             self.avg_time = sum(self.time) / len(self.time)
 
-    def add(self, reasone, time, dst_host, dst_port):
+    def add(self, reasone, time):
         if time != 0:
             time = round(time * 1000, 3)
             self.time.append(time)
@@ -29,17 +24,13 @@ class Stat:
         else:
             self.results['failed'] += 1
 
-        res = f'Ping {dst_host}:{dst_port} ' \
-              f'- {reasone} - time={time}ms'
-        print(res)
-
     def sumup(self):
         res = (f'Ping statistics:\n '
-               f'{self.stat.results["success"] + self.stat.results["failed"]} '
-               f'times sent\n{self.stat.results["success"]} successful '
-               f'{self.stat.results["failed"]} failed\n')
-        if self.stat.avg_time != 0:
+               f'{self.results["success"] + self.results["failed"]} '
+               f'times sent\n{self.results["success"]} successful '
+               f'{self.results["failed"]} failed\n')
+        if self.avg_time != 0:
             res += (f'Time statistics:\n'
-                    f'Min = {self.stat.min_time}ms, Max = '
-                    f'{self.stat.max_time}ms, Avg = {self.stat.avg_time}ms')
+                    f'Min = {self.min_time}ms, Max = '
+                    f'{self.max_time}ms, Avg = {self.avg_time}ms')
         return res

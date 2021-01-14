@@ -50,30 +50,19 @@ def _parse(pack):
 
 def _parse_ip(pack):
     result = []
-    ver, len_ = _get_version(struct.unpack('!B', pack[:1])[0])
-    result.append(ver)  # Version
-    result.append(len_)  # header length
-    result.append(struct.unpack('!B', pack[1:2])[0])  # services field
-    result.append(struct.unpack('!H', pack[2:4])[0])  # total length
-    result.append(struct.unpack('!H', pack[4:6])[0])  # ID
-    result.append(bin(struct.unpack('!H', pack[6:8])[0]))  # Flags
-    result.append(struct.unpack('!B', pack[8:9])[0])  # TTL
-    result.append(struct.unpack('!B', pack[9:10])[0])  # Proto
-    result.append(struct.unpack('!H', pack[10:12])[0])  # Checksum
+    values = struct.unpack('!BBHHHBBH', pack[:12])
+    data = _get_version(values[0])
+    result.extend(data)  # Version, header length
+    result.extend(values[1:])
     result.append(_get_ip(pack, 12, 16))  # Source IP
     result.append(_get_ip(pack, 16, 20))  # Dest Ip
     return result
 
 
 def _parse_tcp(pack):
-    result = [struct.unpack('!H', pack[:2])[0],
-              struct.unpack('!H', pack[2:4])[0],
-              struct.unpack('!I', pack[4:8])[0],
-              struct.unpack('!I', pack[8:12])[0],
-              bin(struct.unpack('!H', pack[12:14])[0]),
-              struct.unpack('!H', pack[14:16])[0],
-              struct.unpack('!H', pack[16:18])[0],
-              struct.unpack('!H', pack[18:20])[0]]
+    values = struct.unpack('!HHIIHHHH', pack[:20])
+    result = list(values)
+    result[4] = bin(result[4])
     return result
 
 
@@ -85,7 +74,7 @@ def _get_version(value):
     bin_value = bin(value)
     version = int(bin_value[2:-4], 2)
     length = int(bin_value[:-4], 2) * 5
-    return version, length
+    return (version, length)
 
 
 def _get_ip(pack, start, end):
