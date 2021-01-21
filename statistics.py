@@ -16,7 +16,7 @@ class Stat:
             self.avg_time = sum(self.time) / len(self.time)
 
     def add(self, reasone, time):
-        if time != 0:
+        if time > 0:
             time = round(time * 1000, 3)
             self.time.append(time)
         if reasone is ping.Answer.PORT_OPEN:
