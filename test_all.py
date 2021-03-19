@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import unittest
-import time
 from ping import Ping, Answer
 
 
@@ -24,9 +23,6 @@ class Network:
 
     case 6: Проверка на timeout
     Ничего не приходит
-
-    case 7: Пакеты приходят не в порядке отправки
-    Приходит пакетов: 2 в обратном порядке
     '''
     def __init__(self):
         self.case = {1: [b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
@@ -61,13 +57,7 @@ class Network:
                          b"\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03"
                          b"\x00\x00\x00\x04\x00\x00\x00\x05'\x12'\x11\x00"
                          b"\x00\x00\x01\x00\x00\x00\x02P\x12\x04\x00\x00\x00"
-                         b"\x00\x00"],
-                     7: [b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                         b'\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00',
-                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                         b'\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00']}
+                         b"\x00\x00"]}
         self.current_case = 0
 
     def settimeout(self, timeout):
@@ -131,20 +121,3 @@ class TestTcping(unittest.TestCase):
 
         code, time = self.ping.ping(seq=1)
         self.assertEqual(code, Answer.TIMEOUT)
-
-    def test_mix(self):
-        self.socket.current_case = 7
-
-        current = time.time()
-        self.ping.packages_set[1] = (current, 0)
-        self.ping.packages_set[2] = (current, 0)
-        self.ping.packages_list.append((1, current, 0))
-        self.ping.packages_list.append((2, current, 0))
-
-        seq, result, time_, recv_pack = self.ping.parse_packages_async(1)
-        self.assertEqual(seq, 2)
-        self.assertEqual(result, Answer.PORT_CLOSED)
-
-        seq, result, time_, recv_pack = self.ping.parse_packages_async(1)
-        self.assertEqual(seq, 1)
-        self.assertEqual(result, Answer.PORT_CLOSED)
